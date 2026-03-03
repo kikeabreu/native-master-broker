@@ -19,7 +19,7 @@ export default function Login({ onAuthed }) {
     return (
         <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#07070f", color: "#fff" }}>
             <div style={{ width: 380, border: "1px solid #1a1a2e", borderRadius: 14, padding: 18, background: "#0d0d1a" }}>
-                <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 10 }}>Login · Top Seller CRM</div>
+                <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 10 }}>Login · Native Master Broker CRM</div>
 
                 <label style={{ fontSize: 12, color: "#9ca3af" }}>Email</label>
                 <input
