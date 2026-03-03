@@ -58,7 +58,7 @@ const FIELDS = {
   facebook: ["nombre", "correo", "telefono", "facebook", "amigosCom"],
 };
 const FL = { nombre: "Nombre y Apellido", correo: "Correo", telefono: "Teléfono", web: "Sitio Web", redSocial: "Red Social", conocePor: "¿Cómo lo conozco?", comision: "Comisión acordada", quienRefiere: "¿Quién lo refiere?", facebook: "Perfil Facebook", amigosCom: "Amigos en común" };
-const DEFAULT_CONFIG = { agencia: "Top Seller", socios: "", moneda: "MXN", metaClientes: 10, metaIngresos: 50000, inversion: 0, periodoInicio: new Date().toISOString().slice(0, 7) + "-01", periodoFin: new Date().toISOString().slice(0, 10) };
+const DEFAULT_CONFIG = { agencia: "NATIVE MASTER BROKER", socios: "", moneda: "MXN", metaClientes: 10, metaIngresos: 50000, inversion: 0, periodoInicio: new Date().toISOString().slice(0, 7) + "-01", periodoFin: new Date().toISOString().slice(0, 10) };
 
 // ── UTILS ──────────────────────────────────────────────────────────────────
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -554,7 +554,7 @@ export default function CRM({ user, role = "team" }) {
 
       // patch a formato BD
       const patch = {
-        agencia: c.agencia || "Top Seller",
+        agencia: c.agencia || "Native Master Broker",
         socios: c.socios || "",
         moneda: c.moneda || "MXN",
         meta_clientes: Number(c.metaClientes || 10),
@@ -1138,7 +1138,7 @@ export default function CRM({ user, role = "team" }) {
   // ── REPORTE ───────────────────────────────────────────────────────────────
   const Reporte = () => {
     const copyR = () => {
-      const t = `REPORTE COMERCIAL — ${cfg.agencia || "Top Seller"}\n${fd(cfg.periodoInicio)} — ${fd(cfg.periodoFin)}${cfg.socios ? "\nPara: " + cfg.socios : ""}\n\n` +
+      const t = `REPORTE COMERCIAL — ${cfg.agencia || "NATIVE MASTER BROKER"}\n${fd(cfg.periodoInicio)} — ${fd(cfg.periodoFin)}${cfg.socios ? "\nPara: " + cfg.socios : ""}\n\n` +
         `META: ${stats.closed}/${cfg.metaClientes} clientes (${Math.round(Math.min(stats.closed / cfg.metaClientes * 100, 100))}%)\n` +
         `INGRESOS: ${fm(stats.mrr, cfg.moneda)} | Ticket prom: ${fm(stats.ticket, cfg.moneda)}\n` +
         `ROI: ${stats.roi !== null ? stats.roi + "%" : "Sin inversión"} | Conversión: ${stats.convRate}%\n\n` +
@@ -1151,7 +1151,7 @@ export default function CRM({ user, role = "team" }) {
         <div style={{ ...S.card, padding: 28 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
             <div>
-              <div style={{ fontSize: 10, color: "#6366f1", fontWeight: 700, letterSpacing: 3, marginBottom: 6 }}>{(cfg.agencia || "TOP SELLER").toUpperCase()}</div>
+              <div style={{ fontSize: 10, color: "#6366f1", fontWeight: 700, letterSpacing: 3, marginBottom: 6 }}>{(cfg.agencia || "NATIVE MASTER BROKER").toUpperCase()}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: -1 }}>Reporte Comercial</div>
               <div style={{ fontSize: 12, color: "#4b5563" }}>{fd(cfg.periodoInicio)} — {fd(cfg.periodoFin)}</div>
               {cfg.socios && <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Para: {cfg.socios}</div>}
@@ -1481,8 +1481,8 @@ export default function CRM({ user, role = "team" }) {
       {/* Sidebar */}
       <div style={S.side}>
         <div style={S.logo}>
-          <div style={{ fontSize: 9, color: "#6366f1", fontWeight: 700, letterSpacing: 3, textTransform: "uppercase" }}>Agencia de Marketing</div>
-          <div style={{ fontSize: 19, fontWeight: 900, color: "#fff", letterSpacing: -.5 }}>Top Seller Inmobiliario</div>
+          <div style={{ fontSize: 9, color: "#6366f1", fontWeight: 700, letterSpacing: 3, textTransform: "uppercase" }}>VENTAS INMOBILIARIAS</div>
+          <div style={{ fontSize: 19, fontWeight: 900, color: "#fff", letterSpacing: -.5 }}>NATIVE MASTER BROKER</div>
           <button
             style={S.btn("secondary")}
             onClick={async () => {
@@ -1492,7 +1492,7 @@ export default function CRM({ user, role = "team" }) {
           >
             Salir
           </button>
-          <div style={{ fontSize: 9, color: "#fff", marginTop: 1 }}>CRM · Área Comercial</div>
+          <div style={{ fontSize: 9, color: "#fff", marginTop: 1 }}>CRM · Comercial Interno</div>
           <button
             style={S.btn("secondary")}
             onClick={() => setView("smartsales")}>
