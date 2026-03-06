@@ -2397,7 +2397,7 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
           <div style={{fontSize:19,fontWeight:900,color:"#fff",letterSpacing:-.5}}>NATIVE MASTER BROKER</div>
           <div style={{fontSize:9,color:"#4b5563",marginTop:1}}>CRM · Comercial Interno</div>
           <div style={{marginTop:10,display:"flex",gap:6}}>
-           <span style={S.bdg(isAdmin?"#6366f1":"#374151")}>{user?.user_metadata?.full_name || user?.email || (isAdmin?"admin":"asesor")}</span>
+           <span style={S.bdg(isAdmin?"#6366f1":"#374151")}>{profiles.find(p=>p.user_id===user?.id)?.full_name || user?.email || (isAdmin?"admin":"asesor")}</span>
             <button style={{...S.btn("secondary"),padding:"4px 10px",fontSize:10}} onClick={async()=>{ const { supabase }=await import("./supabaseClient"); await supabase.auth.signOut(); }}>Salir</button>
           </div>
         </div>
