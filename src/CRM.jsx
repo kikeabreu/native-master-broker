@@ -557,7 +557,16 @@ export default function CRM({ user, role="team" }) {
       try {
         const { dbUpsertProspect }=await import("./db");
         const existingOwner=allP.find(x=>x.id===dragId)?.owner_id||user.id;
-        await dbUpsertProspect({ id:dragId, tab:dragTab, owner_id:existingOwner, data:Object.fromEntries((FIELDS[dragTab]||[]).map(k=>[k,k==="conocePor"?(Array.isArray(p.conocePor)?p.conocePor:(p.conocePor?[p.conocePor]:[])):(p[k]??")])), stages:newStages, perdido, venta:Array.isArray(p.venta)?p.venta:(p.venta?.monto?[p.venta]:[]), notas_historial:p.notasHistorial||[] });
+        await dbUpsertProspect({ 
+  id:dragId, 
+  tab:dragTab, 
+  owner_id:existingOwner, 
+  data:Object.fromEntries((FIELDS[dragTab]||[]).map(k=>[k,k==="conocePor"?(Array.isArray(p.conocePor)?p.conocePor:(p.conocePor?[p.conocePor]:[])):(p[k]??"")])), 
+  stages:newStages, 
+  perdido, 
+  venta:Array.isArray(p.venta)?p.venta:(p.venta?.monto?[p.venta]:[]), 
+  notas_historial:p.notasHistorial||[] 
+});
         await reloadPros(dragTab);
       } catch(e) { console.error(e); toast_("Error moviendo prospecto",false); }
       setDragId(null); setDragTab(null); setOverCol(null);
