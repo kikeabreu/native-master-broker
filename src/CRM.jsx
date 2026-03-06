@@ -1727,28 +1727,25 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
       return modal.person ? {...modal.person,tab} : {id:uid(),tab,stages:{},notasHistorial:[],creadoEn:today(),updatedAt:today()};
     };
 
-    const [form,   setFormLocal]   = useState(initForm);
-    const [tab_,   setTab_Local]   = useState(modal._tab || "datos");
+    const [form,   setForm]   = useState(initForm);
+    const [tab_Local, setTab_Local] = useState(modal._tab || "datos");
+    const tab_ = tab_Local;
     const [nNota,  setNNota]  = useState("");
-    const [ventas, setVentasLocal] = useState(initVentas);
+    const [ventas, setVentas] = useState(initVentas);
     const [newTask,setNewTask]= useState(null);
     const [ventaErrors, setVentaErrors] = useState({});
 
-    // Wrappers that also persist state in parent modal (survives re-renders/remounts)
-    const setForm = (updater) => {
-      setFormLocal(prev => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        setModal(m => m ? {...m, _form: next} : m);
-        return next;
-      });
-    };
-    const setTab_ = (t) => { setTab_Local(t); setModal(m => m ? {...m, _tab: t} : m); };
-    const setVentas = (updater) => {
-      setVentasLocal(prev => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        setModal(m => m ? {...m, _ventas: next} : m);
-        return next;
-      });
+    // Refs hold latest form/ventas without triggering parent re-render.
+    // We only sync to modal state on tab switch, NOT on every keystroke.
+    const formRef   = useRef(form);
+    const ventasRef = useRef(ventas);
+    useEffect(() => { formRef.current   = form;   }, [form]);
+    useEffect(() => { ventasRef.current = ventas; }, [ventas]);
+
+    const setTab_ = (t) => {
+      // Persist current values into parent modal once on tab change
+      setModal(m => m ? {...m, _form: formRef.current, _ventas: ventasRef.current, _tab: t} : m);
+      setTab_Local(t);
     };
 
     // conocePor como string simple (single select)
@@ -2153,7 +2150,13 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
 
   // ── TAREA MODAL ───────────────────────────────────────────────────────────
   const TareaModal = () => {
-    const [form,setForm]=useState(()=>modal.tarea?{...modal.tarea}:{id:uid(),titulo:"",prospectId:modal.prospectId||"",prioridad:"Media",fecha:today(),hora:"",tipoTarea:"llamada",estado:"pendiente",notas:""});
+    const preProspect = modal.prospectId||"";
+    const preNombre   = preProspect ? (allP.find(p=>p.id===preProspect)?.nombre||"") : "";
+    const [form,setForm]=useState(()=>modal.tarea?{...modal.tarea}:{id:uid(),titulo:"",prospectId:preProspect,prioridad:"Media",fecha:today(),hora:"",tipoTarea:"llamada",estado:"pendiente",notas:""});
+    const [buscaP,  setBuscaP]  = useState(preNombre);
+    const [showList,setShowList]= useState(false);
+    const prospectFiltrado = buscaP.length>1 ? allP.filter(p=>p.nombre&&p.nombre.toLowerCase().includes(buscaP.toLowerCase())).slice(0,8) : [];
+    const prospectSel = allP.find(p=>p.id===form.prospectId);
     return (
       <div style={S.modal} onClick={e=>{if(e.target===e.currentTarget)setModal(null)}}>
         <div style={{...S.mbox,maxWidth:500}}>
@@ -2181,12 +2184,33 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
               <div><label style={S.lbl}>Fecha</label><input type="date" style={S.inp} value={form.fecha} onChange={e=>setForm(f=>({...f,fecha:e.target.value}))}/></div>
             </div>
             <div><label style={S.lbl}>Hora (opcional)</label><input type="time" style={S.inp} value={form.hora||""} onChange={e=>setForm(f=>({...f,hora:e.target.value}))}/></div>
-            <div><label style={S.lbl}>Vincular a contacto</label>
-              <select style={S.inp} value={form.prospectId} onChange={e=>setForm(f=>({...f,prospectId:e.target.value}))}>
-                <option value="">Sin contacto</option>
-                {allP.filter(p=>p.nombre).map(p=><option key={p.id} value={p.id}>{TM[p._tab]?.icon} {p.nombre}</option>)}
-              </select>
+
+            {/* Vincular a contacto — autocomplete search */}
+            <div style={{position:"relative"}}>
+              <label style={S.lbl}>Vincular a contacto (opcional)</label>
+              {prospectSel ? (
+                <div style={{display:"flex",gap:8,alignItems:"center",background:"#0d0d1a",border:"1px solid #6366f133",borderRadius:8,padding:"8px 12px"}}>
+                  <span style={S.bdg(TM[prospectSel._tab]?.color||"#6366f1")}>{TM[prospectSel._tab]?.icon} {prospectSel.nombre}</span>
+                  <button style={{...S.btn("ghost"),padding:"2px 8px",fontSize:11,marginLeft:"auto"}} onClick={()=>{setForm(f=>({...f,prospectId:""}));setBuscaP("");}}>✕ Quitar</button>
+                </div>
+              ) : (
+                <>
+                  <input style={S.inp} value={buscaP} onChange={e=>{setBuscaP(e.target.value);setShowList(true);}} onFocus={()=>setShowList(true)} placeholder="Buscar por nombre..." autoComplete="off"/>
+                  {showList&&prospectFiltrado.length>0&&(
+                    <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:"#0d0d1a",border:"1px solid #1a1a2e",borderRadius:8,marginTop:4,maxHeight:200,overflow:"auto",boxShadow:"0 8px 24px rgba(0,0,0,.6)"}}>
+                      {prospectFiltrado.map(p=>(
+                        <div key={p.id} style={{padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid #14142a"}} onMouseEnter={e=>e.currentTarget.style.background="#14142a"} onMouseLeave={e=>e.currentTarget.style.background="transparent"} onClick={()=>{setForm(f=>({...f,prospectId:p.id}));setBuscaP(p.nombre||"");setShowList(false);}}>
+                          <span style={S.bdg(TM[p._tab]?.color||"#6366f1")}>{TM[p._tab]?.icon}</span>
+                          <div><div style={{fontSize:13,color:"#fff"}}>{p.nombre}</div><div style={{fontSize:10,color:"#374151"}}>{p.telefono||p.correo||""}</div></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+              {form.prospectId&&<div style={{fontSize:10,color:"#10b981",marginTop:4}}>✅ Se registrará en el historial del contacto automáticamente</div>}
             </div>
+
             <div><label style={S.lbl}>Notas</label><textarea style={{...S.inp,minHeight:60,resize:"vertical"}} value={form.notas} onChange={e=>setForm(f=>({...f,notas:e.target.value}))}/></div>
           </div>
           <div style={{padding:"14px 20px",borderTop:"1px solid #1a1a2e",display:"flex",justifyContent:"flex-end",gap:8,flexShrink:0}}>
