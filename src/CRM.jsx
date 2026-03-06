@@ -189,6 +189,8 @@ export default function CRM({ user, role="team" }) {
   const [saving,  setSaving]  = useState(false);
   const [kFilter, setKFilter] = useState("all");
   const [notifUnread, setNotifUnread] = useState(0);
+  // Admin global filter: "all" | user_id
+  const [viewAs, setViewAs] = useState("all");
 
   const safeRole = String(role||"").trim().toLowerCase();
   const isAdmin  = safeRole === "admin";
@@ -278,6 +280,21 @@ export default function CRM({ user, role="team" }) {
   const toast_ = (msg,ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),2600); };
   const allP   = useMemo(() => LIST_TABS.flatMap(t=>pros[t].map(p=>({...p,_tab:t}))), [pros]);
 
+  // Filtered display data for admin viewAs — does NOT affect allP (used in autocomplete/modals)
+  const displayPros = useMemo(() => {
+    if (!isAdmin || viewAs === "all") return pros;
+    return Object.fromEntries(LIST_TABS.map(t => [t, pros[t].filter(p => p.owner_id === viewAs)]));
+  }, [pros, viewAs, isAdmin]);
+  const displayAllP = useMemo(() => LIST_TABS.flatMap(t=>displayPros[t].map(p=>({...p,_tab:t}))), [displayPros]);
+  const displayTareas = useMemo(() => {
+    if (!isAdmin || viewAs === "all") return tareas;
+    return tareas.filter(t => t.ownerId === viewAs);
+  }, [tareas, viewAs, isAdmin]);
+  const displayActs = useMemo(() => {
+    if (!isAdmin || viewAs === "all") return acts;
+    return acts.filter(a => a.ownerId === viewAs);
+  }, [acts, viewAs, isAdmin]);
+
   // ── STATS ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const closed   = LIST_TABS.reduce((a,t)=>a+pros[t].filter(p=>isClosed(p,t)).length,0);
@@ -297,7 +314,7 @@ export default function CRM({ user, role="team" }) {
     const convRate = total ? Math.round(closed/total*100) : 0;
     const propSent = allP.filter(p=>{ const s=STAGES[p._tab]||[]; return s.some(x=>x.toLowerCase().includes("propuesta")&&p.stages?.[x]); }).length;
     const contacted= allP.filter(p=>{ const s=STAGES[p._tab]||[]; return s[0]&&p.stages?.[s[0]]; }).length;
-    const tarHoy   = tareas.filter(t=>t.estado==="pendiente"&&t.fecha<=today());
+    const tarHoy   = displayTareas.filter(t=>t.estado==="pendiente"&&t.fecha<=today());
     const dayN     = new Date().getDate();
     const daysIM   = new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
     const proyect  = dayN>0 ? Math.round(closed/dayN*daysIM) : 0;
@@ -672,7 +689,7 @@ export default function CRM({ user, role="team" }) {
     const [dragId,  setDragId]  = useState(null);
     const [dragTab, setDragTab] = useState(null);
     const [overCol, setOverCol] = useState(null);
-    const filtered = allP.filter(p=>kFilter==="all"||p._tab===kFilter);
+    const filtered = displayAllP.filter(p=>kFilter==="all"||p._tab===kFilter);
     const byStage  = Object.fromEntries(KANBAN_COLS.map(st=>[st,filtered.filter(p=>kStage(p,p._tab)===st)]));
 
     const onDragStart = (p) => { setDragId(p.id); setDragTab(p._tab); };
@@ -764,7 +781,7 @@ export default function CRM({ user, role="team" }) {
   const ListView = ({ tab }) => {
     const color=TM[tab].color; const stages=STAGES[tab];
     const [bq,setBq]=useState(""); const [ef,setEf]=useState("all");
-    const list=pros[tab].filter(p=>{
+    const list=displayPros[tab].filter(p=>{
       const mb=!bq||Object.values(p).join(" ").toLowerCase().includes(bq.toLowerCase());
       const me=ef==="all"||(ef==="cerrado"&&isClosed(p,tab))||(ef==="activo"&&!isClosed(p,tab)&&!p.perdido)||(ef==="perdido"&&p.perdido);
       return mb&&me;
@@ -823,14 +840,14 @@ export default function CRM({ user, role="team" }) {
   // ── TAREAS ────────────────────────────────────────────────────────────────
   const Tareas = () => {
     const [f,setF]=useState("pendiente");
-    const list=tareas.filter(t=>f==="all"||(f==="pendiente"&&t.estado==="pendiente")||(f==="completada"&&t.estado==="completada")).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    const list=displayTareas.filter(t=>f==="all"||(f==="pendiente"&&t.estado==="pendiente")||(f==="completada"&&t.estado==="completada")).sort((a,b)=>a.fecha.localeCompare(b.fecha));
     return (
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
         <div style={{display:"flex",gap:8}}>
           {["pendiente","completada","all"].map(x=>(
             <button key={x} style={{...S.btn(f===x?"primary":"secondary"),padding:"6px 14px"}} onClick={()=>setF(x)}>
               {x==="pendiente"?"⏳ Pendientes":x==="completada"?"✅ Completadas":"📋 Todas"}
-              {x==="pendiente"&&tareas.filter(t=>t.estado==="pendiente").length>0&&<span style={{marginLeft:6,background:"rgba(255,255,255,.2)",borderRadius:10,padding:"0 6px",fontSize:10}}>{tareas.filter(t=>t.estado==="pendiente").length}</span>}
+              {x==="pendiente"&&displayTareas.filter(t=>t.estado==="pendiente").length>0&&<span style={{marginLeft:6,background:"rgba(255,255,255,.2)",borderRadius:10,padding:"0 6px",fontSize:10}}>{displayTareas.filter(t=>t.estado==="pendiente").length}</span>}
             </button>
           ))}
         </div>
@@ -902,7 +919,7 @@ export default function CRM({ user, role="team" }) {
     };
 
     const getTasksForDay = (dateStr) => {
-      return tareas.filter(t=>{
+      return displayTareas.filter(t=>{
         if (t.fecha!==dateStr) return false;
         if (filterType!=="all"&&t.tipoTarea!==filterType) return false;
         if (filterPrio!=="all"&&t.prioridad!==filterPrio) return false;
@@ -1024,7 +1041,7 @@ export default function CRM({ user, role="team" }) {
     const wAgo=new Date(Date.now()-7*864e5).toISOString().split("T")[0];
     const mS=today().slice(0,7)+"-01";
     const byType=Object.fromEntries(ACT_TYPES.map(a=>[a.id,{s:0,m:0,t:0}]));
-    acts.forEach(a=>{ if (!byType[a.tipo]) return; const q=Number(a.cantidad)||1; byType[a.tipo].t+=q; if (a.fecha>=wAgo) byType[a.tipo].s+=q; if (a.fecha>=mS) byType[a.tipo].m+=q; });
+    displayActs.forEach(a=>{ if (!byType[a.tipo]) return; const q=Number(a.cantidad)||1; byType[a.tipo].t+=q; if (a.fecha>=wAgo) byType[a.tipo].s+=q; if (a.fecha>=mS) byType[a.tipo].m+=q; });
     const totS=Object.values(byType).reduce((a,x)=>a+x.s,0);
     const totM=Object.values(byType).reduce((a,x)=>a+x.m,0);
     const mx=Math.max(...Object.values(byType).map(x=>x.s),1);
@@ -1049,11 +1066,11 @@ export default function CRM({ user, role="team" }) {
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr><th style={S.th}>Tipo</th><th style={S.th}>Cant.</th><th style={S.th}>Fecha</th>{isAdmin&&<th style={S.th}>Propietario</th>}<th style={S.th}>Notas</th></tr></thead>
             <tbody>
-              {acts.slice(0,limit).map(a=>{ const at=ACT_TYPES.find(x=>x.id===a.tipo)||{icon:"⚡",label:a.tipo}; return (<tr key={a.id}><td style={S.td}><span style={S.bdg("#6366f1")}>{at.icon} {at.label}</span></td><td style={{...S.td,fontWeight:700,color:"#fff"}}>{a.cantidad||1}</td><td style={{...S.td,fontSize:12,color:"#6b7280"}}>{fd(a.fecha)}</td>{isAdmin&&<td style={{...S.td,fontSize:12,color:"#93c5fd"}}>{a.ownerName||"—"}</td>}<td style={{...S.td,fontSize:12,color:"#4b5563"}}>{a.notas||"—"}</td></tr>); })}
-              {acts.length===0&&<tr><td colSpan={isAdmin?5:4} style={{...S.td,textAlign:"center",color:"#374151",padding:28}}>Sin actividades</td></tr>}
+              {displayActs.slice(0,limit).map(a=>{ const at=ACT_TYPES.find(x=>x.id===a.tipo)||{icon:"⚡",label:a.tipo}; return (<tr key={a.id}><td style={S.td}><span style={S.bdg("#6366f1")}>{at.icon} {at.label}</span></td><td style={{...S.td,fontWeight:700,color:"#fff"}}>{a.cantidad||1}</td><td style={{...S.td,fontSize:12,color:"#6b7280"}}>{fd(a.fecha)}</td>{isAdmin&&<td style={{...S.td,fontSize:12,color:"#93c5fd"}}>{a.ownerName||"—"}</td>}<td style={{...S.td,fontSize:12,color:"#4b5563"}}>{a.notas||"—"}</td></tr>); })}
+              {displayActs.length===0&&<tr><td colSpan={isAdmin?5:4} style={{...S.td,textAlign:"center",color:"#374151",padding:28}}>Sin actividades</td></tr>}
             </tbody>
           </table>
-          {acts.length>limit&&<div style={{padding:16,textAlign:"center",borderTop:"1px solid #14142a"}}><button style={S.btn("secondary")} onClick={()=>setLimit(l=>l+20)}>Ver más ({acts.length-limit} restantes)</button></div>}
+          {displayActs.length>limit&&<div style={{padding:16,textAlign:"center",borderTop:"1px solid #14142a"}}><button style={S.btn("secondary")} onClick={()=>setLimit(l=>l+20)}>Ver más ({displayActs.length-limit} restantes)</button></div>}
         </div>
       </div>
     );
@@ -1734,6 +1751,7 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
     const [ventas, setVentas] = useState(initVentas);
     const [newTask,setNewTask]= useState(null);
     const [ventaErrors, setVentaErrors] = useState({});
+    const [formErrors,  setFormErrors]  = useState({});
 
     // Refs hold latest form/ventas without triggering parent re-render.
     // We only sync to modal state on tab switch, NOT on every keystroke.
@@ -1782,11 +1800,27 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
       setNewTask(null);
     };
 
+    // Validate required fields from admin config
+    const validateForm = () => {
+      const required = (cfg.camposObligatorios||{})[tab] || [];
+      const errs = {};
+      required.forEach(campo => {
+        const val = form[campo];
+        if (!val || (typeof val === "string" && !val.trim())) {
+          errs[campo] = "Este campo es obligatorio";
+        }
+      });
+      setFormErrors(errs);
+      return Object.keys(errs).length === 0;
+    };
+
     const handleSave = () => {
-      if (tab_==="venta" && ventas.length>0 && !validateVentas()) {
-        return; // stay on venta tab, errors shown
+      // Validate required fields (from admin config)
+      if (!validateForm()) {
+        setTab_("datos"); // jump to datos tab where most required fields live
+        return;
       }
-      // If on venta tab, also validate before saving from any tab
+      // Validate ventas if any
       if (ventas.length>0 && !validateVentas()) {
         setTab_("venta");
         return;
@@ -1821,23 +1855,60 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
             {/* ── DATOS ── */}
             {tab_==="datos"&&(
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {/* Required fields error banner */}
+                {Object.keys(formErrors).length>0&&(
+                  <div style={{background:"rgba(239,68,68,.08)",border:"1px solid #ef444433",borderRadius:8,padding:"10px 14px"}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#f87171",marginBottom:4}}>⚠️ Completa los campos obligatorios para guardar</div>
+                    {Object.entries(formErrors).map(([k,msg])=>(
+                      <div key={k} style={{fontSize:11,color:"#fca5a5"}}>· {msg} — <strong>{k}</strong></div>
+                    ))}
+                  </div>
+                )}
                 {/* nombre full width */}
-                <div><label style={S.lbl}>Nombre y Apellido</label><input style={S.inp} value={form.nombre||""} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre completo"/></div>
+                <div>
+                  <label style={{...S.lbl,color:formErrors.nombre?"#ef4444":undefined}}>Nombre y Apellido{(cfg.camposObligatorios||{})[tab]?.includes("nombre")&&<span style={{color:"#ef4444"}}> *</span>}</label>
+                  <input style={{...S.inp,borderColor:formErrors.nombre?"#ef4444":undefined}} value={form.nombre||""} onChange={e=>{setForm(f=>({...f,nombre:e.target.value}));setFormErrors(fe=>({...fe,nombre:undefined}));}} placeholder="Nombre completo"/>
+                  {formErrors.nombre&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>⚠️ {formErrors.nombre}</div>}
+                </div>
                 <div style={S.g2}>
-                  <div><label style={S.lbl}>Correo</label><input style={S.inp} value={form.correo||""} onChange={e=>setForm(f=>({...f,correo:e.target.value}))} placeholder="correo@email.com"/></div>
-                  <div><label style={S.lbl}>Teléfono</label><input style={S.inp} value={form.telefono||""} onChange={e=>setForm(f=>({...f,telefono:e.target.value}))} placeholder="+52 999 000 0000"/></div>
+                  <div>
+                    <label style={{...S.lbl,color:formErrors.correo?"#ef4444":undefined}}>Correo{(cfg.camposObligatorios||{})[tab]?.includes("correo")&&<span style={{color:"#ef4444"}}> *</span>}</label>
+                    <input style={{...S.inp,borderColor:formErrors.correo?"#ef4444":undefined}} value={form.correo||""} onChange={e=>{setForm(f=>({...f,correo:e.target.value}));setFormErrors(fe=>({...fe,correo:undefined}));}} placeholder="correo@email.com"/>
+                    {formErrors.correo&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>⚠️ {formErrors.correo}</div>}
+                  </div>
+                  <div>
+                    <label style={{...S.lbl,color:formErrors.telefono?"#ef4444":undefined}}>Teléfono{(cfg.camposObligatorios||{})[tab]?.includes("telefono")&&<span style={{color:"#ef4444"}}> *</span>}</label>
+                    <input style={{...S.inp,borderColor:formErrors.telefono?"#ef4444":undefined}} value={form.telefono||""} onChange={e=>{setForm(f=>({...f,telefono:e.target.value}));setFormErrors(fe=>({...fe,telefono:undefined}));}} placeholder="+52 999 000 0000"/>
+                    {formErrors.telefono&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>⚠️ {formErrors.telefono}</div>}
+                  </div>
                 </div>
                 {(FIELDS[tab]||[]).includes("presupuesto")&&(
                   <div style={S.g2}>
-                    <div><label style={S.lbl}>Presupuesto ($)</label><input type="number" style={S.inp} value={form.presupuesto||""} onChange={e=>setForm(f=>({...f,presupuesto:e.target.value}))} placeholder="0"/></div>
-                    <div><label style={S.lbl}>Propósito de inversión</label><input style={S.inp} value={form.propositoInversion||""} onChange={e=>setForm(f=>({...f,propositoInversion:e.target.value}))} placeholder="Hogar propio, renta, inversión..."/></div>
+                    <div>
+                      <label style={{...S.lbl,color:formErrors.presupuesto?"#ef4444":undefined}}>Presupuesto ($){(cfg.camposObligatorios||{})[tab]?.includes("presupuesto")&&<span style={{color:"#ef4444"}}> *</span>}</label>
+                      <input type="number" style={{...S.inp,borderColor:formErrors.presupuesto?"#ef4444":undefined}} value={form.presupuesto||""} onChange={e=>{setForm(f=>({...f,presupuesto:e.target.value}));setFormErrors(fe=>({...fe,presupuesto:undefined}));}} placeholder="0"/>
+                      {formErrors.presupuesto&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>⚠️ {formErrors.presupuesto}</div>}
+                    </div>
+                    <div>
+                      <label style={{...S.lbl,color:formErrors.propositoInversion?"#ef4444":undefined}}>Propósito de inversión{(cfg.camposObligatorios||{})[tab]?.includes("propositoInversion")&&<span style={{color:"#ef4444"}}> *</span>}</label>
+                      <input style={{...S.inp,borderColor:formErrors.propositoInversion?"#ef4444":undefined}} value={form.propositoInversion||""} onChange={e=>{setForm(f=>({...f,propositoInversion:e.target.value}));setFormErrors(fe=>({...fe,propositoInversion:undefined}));}} placeholder="Hogar propio, renta, inversión..."/>
+                      {formErrors.propositoInversion&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>⚠️ {formErrors.propositoInversion}</div>}
+                    </div>
                   </div>
                 )}
                 {(FIELDS[tab]||[]).includes("desarrolloInteres")&&(
-                  <div><label style={S.lbl}>Desarrollo de interés</label><input style={S.inp} value={form.desarrolloInteres||""} onChange={e=>setForm(f=>({...f,desarrolloInteres:e.target.value}))} placeholder="Cayo Coco, Palmarena, Gran Puerto..."/></div>
+                  <div>
+                    <label style={{...S.lbl,color:formErrors.desarrolloInteres?"#ef4444":undefined}}>Desarrollo de interés{(cfg.camposObligatorios||{})[tab]?.includes("desarrolloInteres")&&<span style={{color:"#ef4444"}}> *</span>}</label>
+                    <input style={{...S.inp,borderColor:formErrors.desarrolloInteres?"#ef4444":undefined}} value={form.desarrolloInteres||""} onChange={e=>{setForm(f=>({...f,desarrolloInteres:e.target.value}));setFormErrors(fe=>({...fe,desarrolloInteres:undefined}));}} placeholder="Cayo Coco, Palmarena, Gran Puerto..."/>
+                    {formErrors.desarrolloInteres&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>⚠️ {formErrors.desarrolloInteres}</div>}
+                  </div>
                 )}
                 {(FIELDS[tab]||[]).includes("comision")&&(
-                  <div><label style={S.lbl}>Comisión acordada</label><input style={S.inp} value={form.comision||""} onChange={e=>setForm(f=>({...f,comision:e.target.value}))}/></div>
+                  <div>
+                    <label style={{...S.lbl,color:formErrors.comision?"#ef4444":undefined}}>Comisión acordada{(cfg.camposObligatorios||{})[tab]?.includes("comision")&&<span style={{color:"#ef4444"}}> *</span>}</label>
+                    <input style={{...S.inp,borderColor:formErrors.comision?"#ef4444":undefined}} value={form.comision||""} onChange={e=>{setForm(f=>({...f,comision:e.target.value}));setFormErrors(fe=>({...fe,comision:undefined}));}}/>
+                    {formErrors.comision&&<div style={{fontSize:10,color:"#ef4444",marginTop:3}}>⚠️ {formErrors.comision}</div>}
+                  </div>
                 )}
                 {(FIELDS[tab]||[]).includes("quienRefiere")&&(
                   <div><label style={S.lbl}>¿Quién lo refiere?</label><input style={S.inp} value={form.quienRefiere||""} onChange={e=>setForm(f=>({...f,quienRefiere:e.target.value}))}/></div>
@@ -2296,7 +2367,7 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
       { id:"modo-vendedor",icon:"🚀", label:"Modo Vendedor" },
       { id:"ranking",      icon:"🏆", label:"Ranking" },
     ]},
-    { s:"Listas", items:LIST_TABS.map(t=>({ id:t, icon:TM[t].icon, label:TM[t].label, color:TM[t].color, cnt:pros[t].length })) },
+    { s:"Listas", items:LIST_TABS.map(t=>({ id:t, icon:TM[t].icon, label:TM[t].label, color:TM[t].color, cnt:displayPros[t].length })) },
     { s:"Productividad", items:[
       { id:"tareas",       icon:"✅", label:"Tareas",       cnt:stats.tarHoy.length, cc:"#ef4444" },
       { id:"agenda",       icon:"📅", label:"Agenda" },
@@ -2308,7 +2379,6 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
     ]}] : []),
     { s:"Herramientas", items:[
       { id:"smartsales",    icon:"🚀", label:"Smart Sales" },
-      { id:"notificaciones",icon:"🔔", label:"Notificaciones", cnt:notifUnread, cc:"#ef4444" },
       { id:"tutoriales",    icon:"❓", label:"Ayuda" },
     ]},
   ];
@@ -2332,6 +2402,39 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
           </div>
         </div>
         <div style={{flex:1,overflow:"auto",paddingTop:8}}>
+
+          {/* ── Notificaciones (siempre arriba) ── */}
+          <div style={{padding:"6px 10px 2px"}}>
+            <div style={S.nav(view==="notificaciones","#6366f1")} onClick={()=>setView("notificaciones")}>
+              <span style={{fontSize:13}}>🔔</span>
+              <span style={{flex:1}}>Notificaciones</span>
+              {notifUnread>0&&<span style={{fontSize:9,fontWeight:700,color:"#ef4444",background:"#07070f",borderRadius:8,padding:"1px 6px",minWidth:16,textAlign:"center"}}>{notifUnread}</span>}
+            </div>
+          </div>
+
+          {/* ── ViewAs selector (solo admin) ── */}
+          {isAdmin&&(
+            <div style={{margin:"8px 10px 4px",background:"#07070f",border:"1px solid #1a1a2e",borderRadius:10,padding:"10px 12px"}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,color:"#4a5468",textTransform:"uppercase",marginBottom:6}}>👁 Viendo como</div>
+              <select
+                value={viewAs}
+                onChange={e=>setViewAs(e.target.value)}
+                style={{width:"100%",background:"#0d0d1a",border:"1px solid #1a1a2e",borderRadius:7,padding:"7px 10px",color:viewAs==="all"?"#6b7280":"#818cf8",fontSize:12,fontWeight:viewAs==="all"?400:700,outline:"none",cursor:"pointer",fontFamily:"inherit"}}
+              >
+                <option value="all">— Todo el equipo —</option>
+                {profiles.map(p=>(
+                  <option key={p.user_id} value={p.user_id}>{p.full_name}{p.role==="admin"?" (Admin)":""}</option>
+                ))}
+              </select>
+              {viewAs!=="all"&&(
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
+                  <span style={{fontSize:10,color:"#6366f1"}}>● Filtro activo</span>
+                  <button onClick={()=>setViewAs("all")} style={{fontSize:10,color:"#4a5468",background:"transparent",border:"none",cursor:"pointer",padding:0,textDecoration:"underline"}}>Quitar</button>
+                </div>
+              )}
+            </div>
+          )}
+
           {NAV.map(sec=>(
             <div key={sec.s} style={{paddingTop:10}}>
               <div style={{fontSize:9,fontWeight:700,letterSpacing:2,color:"#1a1a2e",padding:"0 18px 6px",textTransform:"uppercase"}}>{sec.s}</div>
@@ -2355,7 +2458,7 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
         <div style={S.topbar}>
           <div>
             <div style={{fontSize:17,fontWeight:900,color:"#fff",letterSpacing:-.5}}>{curNav.icon} {curNav.label}</div>
-            {isListV&&<div style={{fontSize:10,color:"#374151",marginTop:1}}>{pros[view]?.length||0} registros · {pros[view]?.filter(p=>isClosed(p,view)).length||0} cerrados · {pros[view]?.filter(p=>calcTemp(p,view,tareas).e==="🔥").length||0} 🔥 calientes</div>}
+            {isListV&&<div style={{fontSize:10,color:"#374151",marginTop:1}}>{displayPros[view]?.length||0} registros · {displayPros[view]?.filter(p=>isClosed(p,view)).length||0} cerrados · {displayPros[view]?.filter(p=>calcTemp(p,view,displayTareas).e==="🔥").length||0} 🔥 calientes</div>}
           </div>
           <div style={{display:"flex",gap:8}}>
             {isListV&&<button style={{...S.btn("primary",TM[view]?.color),padding:"7px 16px"}} onClick={()=>setModal({type:"prospect",tab:view,person:null})}>+ Agregar</button>}
