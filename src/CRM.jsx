@@ -191,6 +191,9 @@ export default function CRM({ user, role="team" }) {
   const [notifUnread, setNotifUnread] = useState(0);
   // Admin global filter: "all" | user_id
   const [viewAs, setViewAs] = useState("all");
+  // Persists ProspectModal form state at CRM level so it survives component remounts
+  // (ProspectModal re-defined on every CRM render → React unmounts/remounts it)
+  const prospectStateRef = useRef({ key: null, form: null, ventas: null, tab: "datos" });
 
   const safeRole = String(role||"").trim().toLowerCase();
   const isAdmin  = safeRole === "admin";
@@ -297,23 +300,24 @@ export default function CRM({ user, role="team" }) {
 
   // ── STATS ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const closed   = LIST_TABS.reduce((a,t)=>a+pros[t].filter(p=>isClosed(p,t)).length,0);
-    const total    = LIST_TABS.reduce((a,t)=>a+pros[t].length,0);
-    const byTab    = Object.fromEntries(LIST_TABS.map(t=>[t,pros[t].length]));
-    const cByTab   = Object.fromEntries(LIST_TABS.map(t=>[t,pros[t].filter(p=>isClosed(p,t)).length]));
-    const allVentas= allP.flatMap(p=>getVentas(p).map(v=>({...v,_p:p})));
+    // Use display versions so Dashboard/ModoVendedor respect viewAs filter
+    const closed   = LIST_TABS.reduce((a,t)=>a+displayPros[t].filter(p=>isClosed(p,t)).length,0);
+    const total    = LIST_TABS.reduce((a,t)=>a+displayPros[t].length,0);
+    const byTab    = Object.fromEntries(LIST_TABS.map(t=>[t,displayPros[t].length]));
+    const cByTab   = Object.fromEntries(LIST_TABS.map(t=>[t,displayPros[t].filter(p=>isClosed(p,t)).length]));
+    const allVentas= displayAllP.flatMap(p=>getVentas(p).map(v=>({...v,_p:p})));
     const mrr      = allVentas.reduce((s,v)=>s+Number(v.monto||0),0);
     const ticket   = allVentas.length ? mrr/allVentas.length : 0;
     const roi      = Number(cfg.inversion)>0 ? Math.round((mrr-Number(cfg.inversion))/Number(cfg.inversion)*100) : null;
-    const frios    = allP.filter(p=>!isClosed(p,p._tab)&&!p.perdido&&ds(p.updatedAt||p.creadoEn)>7);
+    const frios    = displayAllP.filter(p=>!isClosed(p,p._tab)&&!p.perdido&&ds(p.updatedAt||p.creadoEn)>7);
     const wAgo     = new Date(Date.now()-7*864e5).toISOString().split("T")[0];
     const mStart   = today().slice(0,7)+"-01";
-    const actW     = acts.filter(a=>a.fecha>=wAgo);
-    const actM     = acts.filter(a=>a.fecha>=mStart);
-    const actTot   = acts.reduce((a,x)=>a+(Number(x.cantidad)||1),0);
+    const actW     = displayActs.filter(a=>a.fecha>=wAgo);
+    const actM     = displayActs.filter(a=>a.fecha>=mStart);
+    const actTot   = displayActs.reduce((a,x)=>a+(Number(x.cantidad)||1),0);
     const convRate = total ? Math.round(closed/total*100) : 0;
-    const propSent = allP.filter(p=>{ const s=STAGES[p._tab]||[]; return s.some(x=>x.toLowerCase().includes("propuesta")&&p.stages?.[x]); }).length;
-    const contacted= allP.filter(p=>{ const s=STAGES[p._tab]||[]; return s[0]&&p.stages?.[s[0]]; }).length;
+    const propSent = displayAllP.filter(p=>{ const s=STAGES[p._tab]||[]; return s.some(x=>x.toLowerCase().includes("propuesta")&&p.stages?.[x]); }).length;
+    const contacted= displayAllP.filter(p=>{ const s=STAGES[p._tab]||[]; return s[0]&&p.stages?.[s[0]]; }).length;
     const tarHoy   = displayTareas.filter(t=>t.estado==="pendiente"&&t.fecha<=today());
     const dayN     = new Date().getDate();
     const daysIM   = new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
@@ -1078,7 +1082,7 @@ export default function CRM({ user, role="team" }) {
 
   // ── MODO VENDEDOR ─────────────────────────────────────────────────────────
   const ModoVendedor = () => {
-    const hoy=tareas.filter(t=>t.estado==="pendiente"&&t.fecha<=today()).sort((a,b)=>["Alta","Media","Baja"].indexOf(a.prioridad)-["Alta","Media","Baja"].indexOf(b.prioridad));
+    const hoy=displayTareas.filter(t=>t.estado==="pendiente"&&t.fecha<=today()).sort((a,b)=>["Alta","Media","Baja"].indexOf(a.prioridad)-["Alta","Media","Baja"].indexOf(b.prioridad));
     return (
       <div style={{maxWidth:460,margin:"0 auto",display:"flex",flexDirection:"column",gap:14}}>
         <div style={{background:"linear-gradient(135deg,#1e1b4b,#312e81)",borderRadius:14,padding:22,textAlign:"center"}}>
@@ -1744,25 +1748,41 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
       return modal.person ? {...modal.person,tab} : {id:uid(),tab,stages:{},notasHistorial:[],creadoEn:today(),updatedAt:today()};
     };
 
-    const [form,   setForm]   = useState(initForm);
-    const [tab_Local, setTab_Local] = useState(modal._tab || "datos");
-    const tab_ = tab_Local;
+    // ── State init: reads from CRM-level ref so it survives ProspectModal remounts ──
+    // ProspectModal is defined inside CRM → every CRM re-render creates a new function
+    // reference → React unmounts/remounts → local state would reset. prospectStateRef
+    // lives at CRM level and is never lost.
+    const modalKey = modal.person?.id || `new-${tab}`;
+    const saved    = prospectStateRef.current?.key === modalKey ? prospectStateRef.current : null;
+
+    const [form,   setFormLocal]   = useState(() => saved?.form   ?? initForm());
+    const [tab_,   setTab_Local]   = useState(() => saved?.tab    ?? "datos");
+    const [ventas, setVentasLocal] = useState(() => saved?.ventas ?? initVentas());
     const [nNota,  setNNota]  = useState("");
-    const [ventas, setVentas] = useState(initVentas);
     const [newTask,setNewTask]= useState(null);
     const [ventaErrors, setVentaErrors] = useState({});
     const [formErrors,  setFormErrors]  = useState({});
 
-    // Refs hold latest form/ventas without triggering parent re-render.
-    // We only sync to modal state on tab switch, NOT on every keystroke.
-    const formRef   = useRef(form);
-    const ventasRef = useRef(ventas);
-    useEffect(() => { formRef.current   = form;   }, [form]);
-    useEffect(() => { ventasRef.current = ventas; }, [ventas]);
-
+    // Wrappers: update local state AND CRM-level ref synchronously.
+    // Ref assignment is synchronous so even if the component remounts immediately
+    // after, useState(init) will read the latest value from the ref.
+    // NO setModal() calls here → no CRM re-renders while typing.
+    const setForm = (updater) => {
+      setFormLocal(prev => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        prospectStateRef.current = { ...prospectStateRef.current, key: modalKey, form: next };
+        return next;
+      });
+    };
+    const setVentas = (updater) => {
+      setVentasLocal(prev => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        prospectStateRef.current = { ...prospectStateRef.current, key: modalKey, ventas: next };
+        return next;
+      });
+    };
     const setTab_ = (t) => {
-      // Persist current values into parent modal once on tab change
-      setModal(m => m ? {...m, _form: formRef.current, _ventas: ventasRef.current, _tab: t} : m);
+      prospectStateRef.current = { ...prospectStateRef.current, key: modalKey, tab: t };
       setTab_Local(t);
     };
 
@@ -1825,13 +1845,14 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
         setTab_("venta");
         return;
       }
+      prospectStateRef.current = { key: null, form: null, ventas: null, tab: "datos" };
       saveP(tab, {...form, venta:ventas});
     };
 
     const PROSPECT_TABS=[["datos","👤 Datos"],["etapas","📊 Etapas"],["notas","📝 Historial"],["actividades","⚡ Actividades"],["tareas","✅ Tareas"],["venta","💰 Ventas"]];
 
     return (
-      <div style={S.modal} onClick={e=>{if(e.target===e.currentTarget)setModal(null)}}>
+      <div style={S.modal} onClick={e=>{if(e.target===e.currentTarget){prospectStateRef.current={key:null,form:null,ventas:null,tab:"datos"};setModal(null);}}}>
         <div style={{...S.mbox,maxWidth:640}}>
           {/* Header */}
           <div style={{padding:"16px 20px",borderBottom:"1px solid #1a1a2e",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
@@ -1858,10 +1879,8 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
                 {/* Required fields error banner */}
                 {Object.keys(formErrors).length>0&&(
                   <div style={{background:"rgba(239,68,68,.08)",border:"1px solid #ef444433",borderRadius:8,padding:"10px 14px"}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#f87171",marginBottom:4}}>⚠️ Completa los campos obligatorios para guardar</div>
-                    {Object.entries(formErrors).map(([k,msg])=>(
-                      <div key={k} style={{fontSize:11,color:"#fca5a5"}}>· {msg} — <strong>{k}</strong></div>
-                    ))}
+                    <div style={{fontSize:12,fontWeight:700,color:"#f87171",marginBottom:4}}>⚠️ Faltan campos obligatorios — corrígelos para poder guardar</div>
+                    {(()=>{const FL={"nombre":"Nombre y Apellido","correo":"Correo","telefono":"Teléfono","presupuesto":"Presupuesto","propositoInversion":"Propósito de inversión","desarrolloInteres":"Desarrollo de interés","conocePor":"¿De dónde lo conozco?","comision":"Comisión acordada"};return Object.keys(formErrors).map(k=>(<div key={k} style={{fontSize:11,color:"#fca5a5",marginTop:2}}>· {FL[k]||k}</div>));})()}
                   </div>
                 )}
                 {/* nombre full width */}
@@ -2397,7 +2416,7 @@ IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
           <div style={{fontSize:19,fontWeight:900,color:"#fff",letterSpacing:-.5}}>NATIVE MASTER BROKER</div>
           <div style={{fontSize:9,color:"#4b5563",marginTop:1}}>CRM · Comercial Interno</div>
           <div style={{marginTop:10,display:"flex",gap:6}}>
-           <span style={S.bdg(isAdmin?"#6366f1":"#374151")}>{profiles.find(p=>p.user_id===user?.id)?.full_name || user?.email || (isAdmin?"admin":"asesor")}</span>
+            <span style={S.bdg(isAdmin?"#6366f1":"#374151")}>{isAdmin?"admin":"asesor"}</span>
             <button style={{...S.btn("secondary"),padding:"4px 10px",fontSize:10}} onClick={async()=>{ const { supabase }=await import("./supabaseClient"); await supabase.auth.signOut(); }}>Salir</button>
           </div>
         </div>
