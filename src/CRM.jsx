@@ -1570,38 +1570,45 @@ export default function CRM({ user, role="team" }) {
   const Tutoriales = () => {
     const [open,setOpen]=useState(null);
     const sections=[
-      { id:"inicio", icon:"🚀", title:"Primeros pasos", content:`
-Bienvenido al CRM de Native Master Broker. Aquí tienes todo lo que necesitas para gestionar tus prospectos y comisiones.
+  { id:"inicio", icon:"🚀", title:"Primeros pasos", content:`
+Bienvenido al CRM de Native Master Broker.
 
-1. Empieza por agregar tus primeros contactos en las listas (Avatar, Círculo de Poder, etc.) usando el botón "+ Agregar" en la barra superior.
-2. Completa los datos del contacto: nombre, teléfono, presupuesto, propósito de inversión y de dónde lo conoces.
+1. Agrega tus primeros contactos en las listas usando el botón "+ Agregar" en la barra superior.
+2. Completa los datos: nombre, teléfono, presupuesto y propósito de inversión.
+   Los campos marcados con * son obligatorios según la configuración del admin.
 3. Ve marcando las etapas conforme avances con el prospecto.
 4. Crea tareas para no perder ningún seguimiento.
-5. Usa Smart Sales para calcular tus comisiones y ver cuánto te falta para tu meta.
-      ` },
-      { id:"contactos", icon:"👥", title:"Gestión de contactos", content:`
+5. Registra actividades (llamadas, WhatsApp, reuniones) para mantener el historial activo.
+  ` },
+  { id:"contactos", icon:"👥", title:"Gestión de contactos", content:`
 LISTAS DE CONTACTOS:
-• Avatar — Prospectos entrevistados para entender su perfil de inversión
-• Círculo de Poder — Tu red cercana de confianza
-• Referidores — Personas que te mandan clientes
-• Referidos — Clientes que llegaron por recomendación
-• Facebook — Prospectos de redes sociales
+- Avatar — Prospectos entrevistados para entender su perfil de inversión
+- Círculo de Poder — Tu red cercana de confianza
+- Referidores — Personas que te mandan clientes
+- Referidos — Clientes que llegaron por recomendación
+- Facebook — Prospectos de redes sociales
 
 CAMPOS IMPORTANTES:
-• Presupuesto — ¿Cuánto puede invertir?
-• Propósito de inversión — ¿Para qué quiere el inmueble? (hogar, renta, inversión, etc.)
-• Desarrollo de interés — ¿Qué proyecto le interesa?
-• ¿De dónde lo conozco? — Puedes seleccionar múltiples fuentes (Círculo cercano, TikTok, Ads, etc.)
+- Presupuesto — ¿Cuánto puede invertir?
+- Propósito de inversión — ¿Para qué quiere el inmueble?
+- Desarrollo de interés — ¿Qué proyecto le interesa?
+- ¿De dónde lo conozco? — Selecciona la fuente del contacto
 
-ETAPAS: Marca el progreso del prospecto desde Contactado hasta Testimonio. El sistema calcula automáticamente la "temperatura" del prospecto (🔥 Caliente, 🟡 Tibio, 🧊 Frío).
-      ` },
-      { id:"tareas", icon:"✅", title:"Tareas y seguimiento", content:`
+CAMPOS OBLIGATORIOS: El admin puede configurar qué campos son requeridos por lista desde Configuración → Campos obligatorios. Aparecen marcados con * y el sistema no te dejará guardar sin llenarlos.
+
+ETAPAS: Marca el progreso del prospecto. El sistema calcula automáticamente la temperatura del prospecto (🔥 Caliente, 🟡 Tibio, 🧊 Frío).
+
+HISTORIAL: Cada acción que realices (tarea, actividad, nota) queda registrada automáticamente en el historial del contacto con fecha, hora y badge AUTO.
+  ` },
+  { id:"tareas", icon:"✅", title:"Tareas y seguimiento", content:`
 Las tareas son tu motor de ventas. Sin seguimiento no hay venta.
 
 CREAR TAREAS:
-• Desde la pestaña "Tareas" del menú → Nueva tarea
-• Desde la ficha de un contacto → pestaña "Tareas" → agregar directamente vinculada al contacto
-• Desde el Modo Vendedor al registrar una acción
+- Desde el menú "Tareas" → Nueva tarea
+- Desde la ficha de un contacto → pestaña "Tareas" → agregar directamente vinculada al contacto
+- Desde el Modo Vendedor al registrar una acción
+
+VINCULAR A CONTACTO: Al crear una tarea puedes buscar el contacto por nombre con el buscador. La tarea quedará vinculada y aparecerá en el historial del contacto automáticamente.
 
 TIPOS DE TAREA:
 📞 Llamada · 🤝 Reunión presencial · 🔄 Seguimiento · 📅 Cita presencial · 🏠 Apartado
@@ -1611,94 +1618,144 @@ HORA: Puedes asignar hora exacta a cada tarea para tener una agenda precisa.
 PRIORIDADES: Alta (🔴) · Media (🟡) · Baja (🟢)
 
 Las tareas aparecen en el Calendario y en el Modo Vendedor del día correspondiente.
-      ` },
-      { id:"calendario", icon:"📅", title:"Calendario", content:`
+  ` },
+  { id:"actividades", icon:"⚡", title:"Actividades y productividad", content:`
+Las actividades registran tu trabajo diario: cuántas llamadas hiciste, cuántos WhatsApp mandaste, cuántas reuniones tuviste.
+
+CÓMO REGISTRAR:
+- Botón "+ Actividad" en la sección Productividad
+- Desde la ficha de un contacto → pestaña "Actividades" → Registrar actividad
+
+VINCULAR A CONTACTO: Al igual que las tareas, puedes buscar el contacto por nombre. La actividad queda en su historial automáticamente.
+
+TIPOS: 📞 Llamada · 💬 WhatsApp · 📧 Email · 📄 Propuesta · 🤝 Reunión · 🔄 Seguimiento
+
+NOTIFICACIÓN AL NAVEGADOR: Cada vez que registras una actividad, el navegador te muestra una notificación de confirmación (debes permitir notificaciones cuando el sistema lo solicite).
+
+PRODUCTIVIDAD: En la sección Productividad puedes ver tu actividad desglosada por tipo, semana, mes e histórico.
+  ` },
+  { id:"notificaciones", icon:"🔔", title:"Notificaciones", content:`
+Las notificaciones están ancladas en la parte superior del menú lateral. El número rojo indica cuántas tienes sin leer.
+
+PANEL DE HOY: Al abrir Notificaciones verás primero un resumen de tu día: actividades registradas por tipo, tareas completadas, pendientes y prospectos actualizados.
+
+ALERTAS AUTOMÁTICAS DEL SISTEMA (se generan para ti automáticamente):
+- 🌟 Motivacional en la mañana si aún no tienes actividad del día
+- 📊 Resumen al final del día con tu avance vs meta
+- ⏰ Tareas vencidas sin atender
+- 🧊 Prospectos fríos (sin actividad en X días, configurable por el admin)
+- 📄 Propuestas sin respuesta
+- 🔥 Racha de días consecutivos con actividad
+- 📈 Tu posición en el ranking vs el compañero más cercano
+
+MENSAJES DEL EQUIPO: El admin puede enviarte mensajes directos (motivacionales, recordatorios, reconocimientos). Estos aparecen en la sección "Mensajes del equipo" y puedes marcarlos como leídos individualmente o todos a la vez.
+
+MARCAR COMO LEÍDA: Cada mensaje del equipo tiene un botón "✓ Marcar como leída". También puedes usar "Marcar todas leídas" en la barra superior.
+  ` },
+  { id:"calendario", icon:"📅", title:"Calendario", content:`
 El calendario muestra todas tus tareas programadas.
 
 VISTAS:
-• Día — Ve en detalle todo lo que tienes hoy
-• Semana — Vista de 7 días para planear tu semana
-• Mes — Vista completa del mes para planificación a largo plazo
-
-FILTROS:
-• Por tipo de tarea (llamada, reunión, cita, etc.)
-• Por prioridad (Alta, Media, Baja)
+- Día — Ve en detalle todo lo que tienes hoy
+- Semana — Vista de 7 días para planear tu semana
+- Mes — Vista completa del mes para planificación a largo plazo
 
 NAVEGACIÓN: Usa las flechas ‹ › para moverte entre períodos. El botón "Hoy" te regresa al día actual.
 
 Haz clic en cualquier tarea para editarla o marcarla como completada.
-      ` },
-      { id:"kanban", icon:"🗂️", title:"Pipeline Kanban (Drag & Drop)", content:`
+  ` },
+  { id:"kanban", icon:"🗂️", title:"Pipeline Kanban", content:`
 El Pipeline Kanban te muestra el estado de todos tus prospectos de un vistazo.
 
 COLUMNAS: Nuevo → Contactado → En Proceso → Propuesta Enviada → Negociación → Cerrado ✅
 
-DRAG & DROP: Simplemente arrastra un prospecto de una columna a otra para moverlo de etapa. El sistema actualiza automáticamente las etapas marcadas.
+DRAG & DROP: Arrastra un prospecto de una columna a otra para moverlo de etapa. El sistema actualiza automáticamente las etapas.
 
-FILTROS: Puedes filtrar por canal (Avatar, Círculo de Poder, etc.) para ver solo los prospectos que te interesan.
+FILTROS: Filtra por canal (Avatar, Círculo de Poder, etc.) para ver solo los prospectos que te interesan.
 
-TEMPERATURA: El ícono en cada tarjeta indica si el prospecto está 🔥 Caliente, 🟡 Tibio o 🧊 Frío según la última actividad.
-      ` },
-      { id:"ventas", icon:"💰", title:"Registro de ventas", content:`
-Cada contacto puede tener MÚLTIPLES ventas/operaciones registradas.
+TEMPERATURA: El ícono en cada tarjeta indica si el prospecto está 🔥 Caliente, 🟡 Tibio o 🧊 Frío.
+
+NOTA: Las etapas "Contrato", "Testimonio" y "Comisiones pagadas" deben marcarse manualmente desde la ficha del contacto — no se actualizan al mover la tarjeta en el Kanban.
+  ` },
+  { id:"ventas", icon:"💰", title:"Registro de ventas", content:`
+Cada contacto puede tener múltiples ventas/operaciones registradas.
 
 CÓMO REGISTRAR UNA VENTA:
 1. Abre la ficha del contacto
 2. Ve a la pestaña "Ventas"
 3. Clic en "+ Nueva operación"
-4. Llena los datos:
-   • Desarrollo — ¿Qué proyecto compró?
-   • Monto — Precio de venta
-   • Tipo — Contado / Financiado / Pre-venta
-   • Fecha de inicio
-   • Enganche diferido — Si aplica o no
+4. Llena los datos: desarrollo, monto, tipo de pago y fecha de inicio
+
+TIPOS DE PAGO: Contado · Financiado · Pre-venta
+
+CAMPOS OBLIGATORIOS EN VENTAS:
+- Desarrollo — siempre requerido
+- Monto — debe ser mayor a 0
+- Fecha de inicio — siempre requerida
+- Plazo en meses — requerido solo si el tipo es Financiado
 
 Las ventas aparecen en el Reporte de Socios y se suman a la facturación del Ranking.
-      ` },
-      { id:"smartsales", icon:"🚀", title:"Smart Sales", content:`
-Smart Sales es tu calculadora de comisiones personales.
+  ` },
+  { id:"ranking", icon:"🏆", title:"Ranking del equipo", content:`
+El Ranking muestra la posición de cada asesor en distintas categorías.
+
+CATEGORÍAS:
+- ⚡ Actividades totales
+- 📞 Llamadas
+- 🤝 Reuniones
+- 👥 Prospectos creados
+- 🏆 Ventas cerradas
+- ✅ Tareas completadas
+- 💰 Facturación total
+
+TOP 3: El podio muestra a los tres mejores de cada categoría. El objetivo es generar sana competencia — nadie puede hacerse el desentendido cuando todos ven los números.
+
+VISIBILIDAD: El admin puede configurar si el ranking es visible para todos o solo para administradores (Configuración → Permisos).
+  ` },
+  { id:"smartsales", icon:"🚀", title:"Smart Sales", content:`
+Smart Sales es una calculadora de comisiones personales independiente del CRM.
 
 CÓMO USARLO:
 1. Ve a Smart Sales desde el menú lateral
-2. En Configuración: pon tu nombre, meta mensual y configura los proyectos A y B con sus precios y estructuras de comisión
-3. Los presets incluyen: Cayo Coco, Soletta, Zen-Ha (residenciales) y Palmarena, Gran Puerto Telchac, Recoleta (semi-urbanizados)
+2. En Configuración: pon tu nombre, meta mensual y configura los proyectos con sus estructuras de comisión
+3. Los presets incluyen: Cayo Coco, Soletta, Zen-Ha y otros
 
 PESTAÑAS:
-• 📊 Tracker — Registra tus ventas del mes y ve tu avance hacia la meta
-• ⚖️ Comparativa — Compara proyectos y simula con sliders
-• 🎯 Escenarios — Ve cuánto ganarías en escenario conservador/realista/agresivo
-• 🔻 Embudo — Calcula cuántas llamadas necesitas para cerrar
-• 🧠 Estrategia — Recomendación personalizada basada en tus datos
+- 📊 Tracker — Registra tus ventas del mes y ve tu avance hacia la meta
+- ⚖️ Comparativa — Compara proyectos y simula con sliders
+- 🎯 Escenarios — Ve cuánto ganarías en escenario conservador/realista/agresivo
+- 🔻 Embudo — Calcula cuántas llamadas necesitas para cerrar
+- 🧠 Estrategia — Recomendación personalizada basada en tus datos
 
-Guarda tu perfil para que persista entre sesiones.
-      ` },
-      { id:"ranking", icon:"🏆", title:"Ranking del equipo", content:`
-El Ranking es visible para todos — admin y asesores.
+Guarda tu perfil para que persista entre sesiones. Smart Sales no está vinculado a tus contactos del CRM.
+  ` },
+  { id:"admin", icon:"🔐", title:"Funciones de administrador", content:`
+Las siguientes funciones son exclusivas del rol admin.
 
-CATEGORÍAS:
-• ⚡ Actividades totales
-• 📞 Llamadas
-• 🤝 Reuniones
-• 👥 Prospectos creados
-• 🏆 Ventas cerradas
-• ✅ Tareas completadas
-• 💰 Facturación total
+FILTRO "VIENDO COMO": En la parte superior del menú lateral, el admin puede seleccionar cualquier asesor para ver todos sus datos — contactos, tareas, pipeline, actividades y dashboard — como si fuera ese asesor. Un indicador azul muestra cuando el filtro está activo.
 
-El objetivo es generar sana competencia dentro del equipo. Nadie puede hacerse el desentendido cuando todos pueden ver los números.
+CONFIGURACIÓN (6 secciones):
+- General — Nombre de agencia, moneda, metas del mes, periodo
+- Alertas y umbrales — Días para considerar prospecto frío, días de propuesta sin respuesta
+- Campos obligatorios — Qué campos son requeridos por lista al crear contactos
+- Permisos del equipo — Visibilidad del ranking, si asesores pueden eliminar, límite de prospectos
+- Horario laboral — Días y horas en que se envían alertas automáticas
+- Mensajes — Texto de bienvenida que ve el equipo en el dashboard
 
-TOP 3: El podio muestra a los tres mejores de cada categoría.
-      ` },
-      { id:"owner", icon:"🔐", title:"Propietario de contactos", content:`
+ENVIAR NOTIFICACIONES: Desde Notificaciones → botón "Enviar mensaje", el admin puede mandar mensajes a todo el equipo o a un asesor específico, con tipo (motivacional, reconocimiento, recordatorio, etc.).
+
+REASIGNAR PROPIETARIO: Desde la ficha de cualquier contacto → pestaña Datos → selector "Reasignar propietario". Solo el admin puede hacerlo. La acción es permanente.
+
+REPORTE DE SOCIOS: Vista exclusiva del admin con métricas consolidadas del equipo, facturación por asesor y análisis del pipeline.
+  ` },
+  { id:"owner", icon:"👤", title:"Propietario de contactos", content:`
 REGLA DE ORO: El propietario de un contacto es quien lo creó. Nadie puede quitarte un contacto editándolo.
 
-Si un admin abre y edita un contacto tuyo, el propietario NO cambia. Solo el propietario original se conserva.
+Si un admin abre y edita un contacto tuyo, el propietario NO cambia. Solo el admin puede reasignar intencionalmente usando el selector en la ficha del contacto.
 
-CAMBIAR PROPIETARIO (solo admin):
-Si un admin necesita reasignar un contacto, puede hacerlo desde la ficha del contacto → pestaña Datos → selector "Reasignar a" (visible solo para administradores).
-
-IMPORTANTE: Esta acción es permanente. Asegúrate de hacerlo intencionalmente.
-      ` },
-    ];
+IMPORTANTE: La reasignación es permanente. El nuevo propietario verá el contacto como propio y el anterior lo perderá de su lista.
+  ` },
+];
     return (
       <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:820}}>
         <div style={{background:"linear-gradient(135deg,#0f172a,#1e293b)",borderRadius:14,padding:24}}>
