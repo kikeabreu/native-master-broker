@@ -323,7 +323,7 @@ export default function CRM({ user, role="team" }) {
     const daysIM   = new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
     const proyect  = dayN>0 ? Math.round(closed/dayN*daysIM) : 0;
     return { closed,total,byTab,cByTab,mrr,ticket,roi,frios,actW,actM,actTot,convRate,propSent,contacted,tarHoy,proyect,allVentas };
-  }, [allP,tareas,acts,cfg,pros]);
+  }, [displayAllP,displayPros,displayTareas,displayActs,cfg]);
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
   const mapTaskRow = row => ({
